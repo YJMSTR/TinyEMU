@@ -6,7 +6,8 @@ SRCS += main.c
 INCLUDES = ./include
 
 all: 
-	$(CC) $(SRCS) $(CFLAGS) main -I $(INCLUDES)
+	$(shell mkdir build)
+	$(CC) $(SRCS) $(CFLAGS) build/main -I $(INCLUDES)
 
 clean:
-	rm -f ./main
+	rm -f build
