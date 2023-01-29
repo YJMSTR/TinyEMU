@@ -32,7 +32,6 @@ void dram_write(uint64_t addr, int length, uint64_t val) {
 }
 
 uint64_t dram_read(uint64_t addr, int length) {
-    printf("dram read 0x%lx\n", addr);
     assert (length == 1 || length == 2 || length == 4 || length == 8);
     assert(addr >= 0 && addr < DRAM_SIZE);
     switch (length) {
@@ -48,6 +47,7 @@ uint64_t dram_read(uint64_t addr, int length) {
 }
 
 uint64_t mem_read(uint64_t addr, int length) {
+    printf("mem read addr = 0x%08lx\n", addr);
     return dram_read(addr - DRAM_BASE, length);
 }
 

@@ -10,4 +10,4 @@ all:
 	$(CC) $(SRCS) $(CFLAGS) build/main -I $(INCLUDES)
 
 clean:
-	rm -f build
+	rm -rf build
