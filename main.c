@@ -20,7 +20,8 @@ int main(int argc, char *argv[]) {
                 cmd_h();
                 break;
             case 'r':
-                cmd_r();
+                if (opt[1] == 'e') cmd_re();
+                else cmd_r();
                 break;
             case 's':
                 cmd_s();

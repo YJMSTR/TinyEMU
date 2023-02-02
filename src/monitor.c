@@ -28,3 +28,8 @@ void cmd_r() {
 void cmd_s() {
     exec_once(&cpu);
 }
+void cmd_re() {
+    for (int i = 0; i < 32; i++) {
+        printf("reg #%d == 0x%08lx\n", i, cpu.regs[i]);
+    }
+}

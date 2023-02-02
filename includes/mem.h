@@ -13,8 +13,8 @@ extern uint8_t *dram;
 
 
 void dram_init();
-void dram_write(uint64_t addr, int length, uint64_t val);
-uint64_t dram_read(uint64_t addr, int length);
-uint64_t mem_read(uint64_t addr, int length);
-void mem_write(uint64_t addr, int length, uint64_t val);
+void dram_store(uint64_t addr, int length, uint64_t val);
+uint64_t dram_load(uint64_t addr, int length);
+uint64_t mem_load(uint64_t addr, int length);
+void mem_store(uint64_t addr, int length, uint64_t val);
 #endif

@@ -13,4 +13,6 @@ void cmd_h();
 void cmd_r();
 
 void cmd_s();
+
+void cmd_re();
 #endif
