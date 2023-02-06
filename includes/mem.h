@@ -9,12 +9,14 @@
 #endif
 #define RESET_VECTOR DRAM_BASE + RESET_VECTOR_OFFSET
 
-extern uint8_t *dram;
+typedef struct DRAM {
+    uint8_t *dram;
+} DRAM;
 
 
-void dram_init();
-void dram_store(uint64_t addr, int length, uint64_t val);
-uint64_t dram_load(uint64_t addr, int length);
-uint64_t mem_load(uint64_t addr, int length);
-void mem_store(uint64_t addr, int length, uint64_t val);
+void dram_init(DRAM *dram);
+void dram_store(DRAM *dram, uint64_t addr, int length, uint64_t val);
+uint64_t dram_load(DRAM *dram, uint64_t addr, int length);
+uint64_t mem_load(DRAM *dram, uint64_t addr, int length);
+void mem_store(DRAM *dram, uint64_t addr, int length, uint64_t val);
 #endif

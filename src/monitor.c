@@ -22,7 +22,7 @@ void cmd_r() {
     long size = ftell(fp);
     printf("Read %ld byte from file.\n", size);
     fseek(fp, 0, SEEK_SET);
-    fread(dram + RESET_VECTOR_OFFSET, size, 1, fp);
+    fread(cpu.bus.dram.dram + RESET_VECTOR_OFFSET, size, 1, fp);
     fclose(fp);
 }
 void cmd_s() {

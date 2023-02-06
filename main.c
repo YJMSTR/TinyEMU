@@ -5,8 +5,8 @@
 int main(int argc, char *argv[]) {
     //todo: 这里要执行一些初始化操作
     //...
-    dram_init();
     cpu_init(&cpu);
+    dram_init(&(cpu.bus.dram));
     init_inst_func();
     while (1) {
         scanf("%s", opt);

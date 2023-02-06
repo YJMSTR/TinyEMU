@@ -1,5 +1,6 @@
 #ifndef __CPU_H__
 #define __CPU_H__
+#include "bus.h"
 #include "common.h"
 
 enum INST_NAME {
@@ -67,6 +68,7 @@ enum CPU_STATE {
 typedef struct CPU {
     uint64_t regs[32];
     uint64_t pc;
+    BUS bus;
     enum CPU_STATE state;
 } CPU;
 

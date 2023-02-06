@@ -1,5 +1,6 @@
 #include "../includes/cpu.h"
 #include "../includes/mem.h"
+#include "../includes/bus.h"
 #include "../includes/common.h"
 
 CPU cpu;
@@ -28,8 +29,16 @@ void cpu_init(CPU *cpu) {
     cpu->state = CPU_RUN;
 }
 
-uint64_t inst_fetch(CPU *CPU) {
-    return mem_load(CPU->pc, 4);
+uint64_t cpu_load(CPU *cpu, uint64_t addr, int length) {
+    return mem_load(&cpu->bus.dram, addr, length);
+}
+
+void cpu_store(CPU *cpu, uint64_t addr, int length, uint64_t val) {
+    mem_store(&cpu->bus.dram, addr, length, val);
+}
+
+uint64_t inst_fetch(CPU *cpu) {
+    return cpu_load(cpu, cpu->pc, 4);
 }
 
 void cpu_exec(CPU *cpu, uint32_t n) {
@@ -363,47 +372,47 @@ void bgeu(DECODER *decoder) {
 }
 
 void lb(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = SEXT(mem_load(decoder->cpu->regs[decoder->rs1] + decoder->imm, 1), 8);
+    decoder->cpu->regs[decoder->rd] = SEXT(cpu_load(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 1), 8);
 }
 
 void lh(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = SEXT(mem_load(decoder->cpu->regs[decoder->rs1] + decoder->imm, 2), 8);
+    decoder->cpu->regs[decoder->rd] = SEXT(cpu_load(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 2), 8);
 }
 
 void lw(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = SEXT(mem_load(decoder->cpu->regs[decoder->rs1] + decoder->imm, 4), 8);
+    decoder->cpu->regs[decoder->rd] = SEXT(cpu_load(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 4), 8);
 }
 
 void lbu(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = mem_load(decoder->cpu->regs[decoder->rs1] + decoder->imm, 1);
+    decoder->cpu->regs[decoder->rd] = cpu_load(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 1);
 }
 
 void lhu(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = mem_load(decoder->cpu->regs[decoder->rs1] + decoder->imm, 2);
+    decoder->cpu->regs[decoder->rd] = cpu_load(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 2);
 }
 
 void lwu(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = mem_load(decoder->cpu->regs[decoder->rs1] + decoder->imm, 4);
+    decoder->cpu->regs[decoder->rd] = cpu_load(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 4);
 }
 
 void ld(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = mem_load(decoder->cpu->regs[decoder->rs1] + decoder->imm, 8);
+    decoder->cpu->regs[decoder->rd] = cpu_load(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 8);
 }
 
 void sb(DECODER *decoder) {
-    mem_store(decoder->cpu->regs[decoder->rs1] + decoder->imm, 1, decoder->cpu->regs[decoder->rs2]);
+    cpu_store(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 1, decoder->cpu->regs[decoder->rs2]);
 }
 
 void sh(DECODER *decoder) {
-    mem_store(decoder->cpu->regs[decoder->rs1] + decoder->imm, 2, decoder->cpu->regs[decoder->rs2]);
+    cpu_store(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 2, decoder->cpu->regs[decoder->rs2]);
 }
 
 void sw(DECODER *decoder) {
-    mem_store(decoder->cpu->regs[decoder->rs1] + decoder->imm, 4, decoder->cpu->regs[decoder->rs2]);
+    cpu_store(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 4, decoder->cpu->regs[decoder->rs2]);
 }
 
 void sd(DECODER *decoder) {
-    mem_store(decoder->cpu->regs[decoder->rs1] + decoder->imm, 8, decoder->cpu->regs[decoder->rs2]);
+    cpu_store(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 8, decoder->cpu->regs[decoder->rs2]);
 }
 
 void addi(DECODER *decoder) {
