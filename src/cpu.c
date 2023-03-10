@@ -22,11 +22,13 @@ uint32_t imm_i(uint32_t inst) {return SEXT(BITS(inst, 31, 20), 12);}
 uint32_t imm_s(uint32_t inst) {return SEXT((BITS(inst, 31, 25) << 5) | BITS(inst, 11, 7), 12); }
 uint32_t imm_b(uint32_t inst) {return (SEXT(BITS(inst, 31, 31), 1) << 12) | (BITS(inst, 30, 25) << 5) | (BITS(inst, 11, 8) << 1) | (BITS(inst, 7, 7) << 11);}
 
+
 void cpu_init(CPU *cpu) {
     cpu->pc = RESET_VECTOR;
     cpu->regs[0] = 0;   
     cpu->regs[2] = DRAM_BASE + DRAM_SIZE;
     cpu->state = CPU_RUN;
+    cpu->pri_level = M;
 }
 
 uint64_t cpu_load(CPU *cpu, uint64_t addr, int length) {
@@ -49,7 +51,9 @@ void cpu_exec(CPU *cpu, uint32_t n) {
 }
 
 void exec_once(CPU *cpu) {
+    cpu->regs[0] = 0;
     uint32_t inst = inst_fetch(cpu);
+    printf("inst = 0x%08x, a0 = 0x%08lx csr[mhartid] = 0x%08lx\n", inst, cpu->regs[a0], cpu->csr.csr[mhartid]);
     DECODER decoder = decode(inst);
     if (decoder.inst_name == INST_NUM) {
         cpu->state = CPU_STOP;
@@ -72,11 +76,11 @@ DECODER decode(uint32_t inst) {
     ret.rs1 = BITS(inst, 19, 15);
     ret.rs2 = BITS(inst, 24, 20);
     ret.shamt = BITS(inst, 25, 20);
+    ret.csr_addr = BITS(inst, 31, 20);
     uint32_t funct3 = BITS(inst, 14, 12);
     uint32_t funct7 = BITS(inst, 31, 25);
     uint32_t funct6 = BITS(inst, 31, 26);
     uint32_t opcode = BITS(inst, 6, 0);
-    
     switch (opcode) {
         case 0b0110111:
             ret.inst_name = LUI;
@@ -241,17 +245,45 @@ DECODER decode(uint32_t inst) {
             }
             break;
         case 0b1110011:
-            switch (funct7) {
-                case 0:
-                    ret.inst_name = ECALL;
-                    break;
-                case 1:
-                    ret.inst_name = EBREAK;
-                    break;
-                default:
-                    ret.inst_name = INST_NUM;
-                    break;
+            if (funct3 != 0) {
+                // csr
+                switch (funct3) {
+                    case 0b001:
+                        ret.inst_name = CSRRW;
+                        break;
+                    case 0b010:
+                        ret.inst_name = CSRRS;
+                        break;
+                    case 0b011: 
+                        ret.inst_name = CSRRC;
+                        break;
+                    case 0b101:
+                        ret.inst_name = CSRRWI;
+                        break;
+                    case 0b110:
+                        ret.inst_name = CSRRSI;
+                        break;
+                    case 0b111:
+                        ret.inst_name = CSRRCI;
+                        break;
+                    default:
+                        ret.inst_name = INST_NUM;
+                        break;
+                }
+            } else {
+                switch ((funct7 << 5) | ret.rs2) {
+                    case 0:
+                        ret.inst_name = ECALL;
+                        break;
+                    case 1:
+                        ret.inst_name = EBREAK;
+                        break;
+                    default:
+                        ret.inst_name = INST_NUM;
+                        break;
+                }
             }
+            
             break;
         case 0b0011011:
             switch (funct3) {
@@ -336,13 +368,14 @@ void jalr(DECODER *decoder) {
 
 void beq(DECODER *decoder) { 
     if (decoder->cpu->regs[decoder->rs1] == decoder->cpu->regs[decoder->rs2]) {
-        printf("imm = 0x%lx\n", decoder->imm);
+        printf("beq offset = 0x%lx\n", decoder->imm);
         decoder->dnpc = decoder->cpu->pc + decoder->imm;
     }
 }
 
 void bne(DECODER *decoder) {
     if (decoder->cpu->regs[decoder->rs1] != decoder->cpu->regs[decoder->rs2]) {
+        printf("bne offset = 0x%lx, rs1 = 0x%lx, rs2 = 0x%lx\n", decoder->imm, decoder->cpu->regs[decoder->rs1], decoder->cpu->regs[decoder->rs2]);
         decoder->dnpc = decoder->cpu->pc + decoder->imm;
     }
 }
@@ -416,6 +449,7 @@ void sd(DECODER *decoder) {
 }
 
 void addi(DECODER *decoder) {
+    printf("addi rd = %d x[rs1 = %d] = 0x%lx imm = 0x%lx\n", decoder->rd, decoder->rs1, decoder->cpu->regs[decoder->rs1], decoder->imm);
     decoder->cpu->regs[decoder->rd] = decoder->cpu->regs[decoder->rs1] + decoder->imm;
 }
 
@@ -543,6 +577,58 @@ void sraw(DECODER *decoder) {
     decoder->cpu->regs[decoder->rd] = SEXT((int)BITS(decoder->cpu->regs[decoder->rs1], 31, 0) >> BITS(decoder->cpu->regs[decoder->rs2], 4, 0), 32);
 }
 
+void csrrw(DECODER *decoder) {
+    uint64_t csrval;
+    if (decoder->rd != 0) 
+        csrval = decoder->cpu->csr.csr[decoder->csr_addr];
+    else csrval = 0;
+    uint64_t rs1val = decoder->cpu->regs[decoder->rs1];
+    printf("csrval = 0x%08lx, rs1val = 0x%08lx\n", csrval, rs1val);
+    decoder->cpu->regs[decoder->rd] = csrval;
+    decoder->cpu->csr.csr[decoder->csr_addr] = rs1val;
+}
+
+void csrrs(DECODER *decoder) {
+    uint64_t csrval = decoder->cpu->csr.csr[decoder->csr_addr];
+    uint64_t rs1val = decoder->rs1 == 0 ? 0 : decoder->cpu->regs[decoder->rs1];
+    printf("before csrval = 0x%08lx, rs1val = 0x%08lx\n", csrval, rs1val);
+    decoder->cpu->regs[decoder->rd] = csrval;
+    if (decoder->rs1 != 0) 
+        decoder->cpu->csr.csr[decoder->csr_addr] = csrval | rs1val;
+    printf("after csrval = 0x%08lx, rs1val = 0x%08lx\n", decoder->cpu->csr.csr[decoder->csr_addr], rs1val);
+}
+
+void csrrc(DECODER *decoder) {
+    uint64_t csrval = decoder->cpu->csr.csr[decoder->csr_addr];
+    uint64_t rs1val = decoder->rs1 == 0 ? 0 : decoder->cpu->regs[decoder->rs1];
+    decoder->cpu->regs[decoder->rd] = csrval;
+    rs1val = ~rs1val;
+    if (decoder->rs1 != 0)
+        decoder->cpu->csr.csr[decoder->csr_addr] = csrval & rs1val;
+}
+
+void csrrwi(DECODER *decoder) {
+    uint64_t uimm = decoder->rs1;
+    uint64_t csrval = decoder->rd == 0 ? 0 : decoder->cpu->csr.csr[decoder->csr_addr];
+    decoder->cpu->regs[decoder->rd] = csrval;
+    decoder->cpu->csr.csr[decoder->csr_addr] = uimm;
+}
+
+void csrrsi(DECODER *decoder) {
+    uint64_t uimm = decoder->rs1;
+    uint64_t csrval = decoder->cpu->csr.csr[decoder->csr_addr];
+    decoder->cpu->regs[decoder->rd] = csrval;
+    decoder->cpu->csr.csr[decoder->csr_addr] = csrval | uimm;
+}
+
+void csrrci(DECODER *decoder) {
+    uint64_t uimm = decoder->rs1;
+    uint64_t csrval = decoder->cpu->csr.csr[decoder->csr_addr];
+    decoder->cpu->regs[decoder->rd] = csrval;
+    uimm = ~uimm;
+    decoder->cpu->csr.csr[decoder->csr_addr] = csrval & uimm;
+}
+
 void init_inst_func() {
     set_inst_func(LUI, lui);
     set_inst_func(AUIPC, auipc);
@@ -596,4 +682,12 @@ void init_inst_func() {
     set_inst_func(SLLW, sllw);
     set_inst_func(SRLW, srlw);
     set_inst_func(SRAW, sraw);
+
+    //Zicsr
+    set_inst_func(CSRRW, csrrw);
+    set_inst_func(CSRRS, csrrs);
+    set_inst_func(CSRRC, csrrc);
+    set_inst_func(CSRRWI, csrrwi);
+    set_inst_func(CSRRSI, csrrsi);
+    set_inst_func(CSRRCI, csrrci);
 }
