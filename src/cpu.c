@@ -14,7 +14,9 @@ uint64_t BITS(uint64_t imm, int hi, int lo) {
     return (imm >> lo) & MASK(hi - lo + 1);
 }
 uint64_t SEXT(uint64_t imm, int n) {
-    return (MASK(64) << n) & imm;
+    if ((1 << (n-1)) & imm) {
+        return (MASK(64) << n) | imm;
+    } else return imm;
 }
 uint32_t imm_u(uint32_t inst) {return SEXT(BITS(inst, 31, 12), 20);}
 uint32_t imm_j(uint32_t inst) {return (SEXT(BITS(inst, 31, 31), 1) << 20) | (BITS(inst, 30, 21) << 1) | (BITS(inst, 20, 20) << 11) | (BITS(inst, 19, 12) << 12);}
