@@ -1,20 +1,20 @@
 #include "../includes/csr.h"
 #include "../includes/cpu.h"
 
-void set_xpp(int cur_lev, int new_lev) {
+void set_xpp(int cur_lev, int new_xpp) {
     switch (cur_lev)
     {
     case S:
         // clear spp
         cpu.csr.csr[sstatus] &= (-1) ^ (1 << 8);    
         // set spp
-        cpu.csr.csr[sstatus] |= (new_lev << 8);
+        cpu.csr.csr[sstatus] |= (new_xpp << 8);
         break;
     case M:
         // clear mpp
         cpu.csr.csr[mstatus] &= (-1) ^ (0b11 << 11);
         // set mpp 
-        cpu.csr.csr[mstatus] |= (new_lev << 11);
+        cpu.csr.csr[mstatus] |= (new_xpp << 11);
         break;
     default:
         cpu.state = CPU_STOP;
