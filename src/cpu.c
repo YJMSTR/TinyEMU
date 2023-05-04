@@ -280,6 +280,12 @@ DECODER decode(uint32_t inst) {
                     case 1:
                         ret.inst_name = EBREAK;
                         break;
+                    case 0b100000010:
+                        ret.inst_name = SRET;
+                        break;
+                    case 0b1100000010:
+                        ret.inst_name = MRET;
+                        break;
                     default:
                         ret.inst_name = INST_NUM;
                         break;
@@ -579,6 +585,7 @@ void sraw(DECODER *decoder) {
     decoder->cpu->regs[decoder->rd] = SEXT((int)BITS(decoder->cpu->regs[decoder->rs1], 31, 0) >> BITS(decoder->cpu->regs[decoder->rs2], 4, 0), 32);
 }
 
+//Zicsr
 void csrrw(DECODER *decoder) {
     uint64_t csrval;
     if (decoder->rd != 0) 
@@ -629,6 +636,27 @@ void csrrci(DECODER *decoder) {
     decoder->cpu->regs[decoder->rd] = csrval;
     uimm = ~uimm;
     decoder->cpu->csr.csr[decoder->csr_addr] = csrval & uimm;
+}
+
+//trap return inst
+void mret(DECODER *decoder) {
+    int pre_level = get_xpp(M);
+    set_xie(M, get_xpie(M));
+    cpu.pri_level = pre_level;
+    set_xpie(M, 1);
+    set_xpp(M, U);
+    set_csr(mstatus, get_csr(mstatus) & (~(1 << 17)));
+    decoder->dnpc = get_csr(mepc);
+}
+
+void sret(DECODER *decoder) {
+    int pre_level = get_xpp(S);
+    set_xie(S, get_xpie(S));
+    cpu.pri_level = pre_level;
+    set_xpie(S, 1);
+    set_xpp(S, U);
+    set_csr(sstatus, get_csr(sstatus) & (~(1 << 17)));
+    decoder->dnpc = get_csr(sepc);
 }
 
 void init_inst_func() {
@@ -692,4 +720,8 @@ void init_inst_func() {
     set_inst_func(CSRRWI, csrrwi);
     set_inst_func(CSRRSI, csrrsi);
     set_inst_func(CSRRCI, csrrci);
+
+    //mret & sret
+    set_inst_func(MRET, mret);
+    set_inst_func(SRET, sret);
 }

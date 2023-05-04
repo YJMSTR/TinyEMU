@@ -171,7 +171,11 @@ enum CSR_ADDR {
 
 void set_xpp(int cur_lev, int new_xpp);
 
+uint64_t get_xpp(int cur_lev);
+
 void set_xpie(int cur_lev, int new_xpie);
+
+uint64_t get_xpie(int cur_lev);
 
 void set_xie(int cur_lev, int new_xie);
 

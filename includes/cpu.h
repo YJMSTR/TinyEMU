@@ -67,6 +67,9 @@ enum INST_NAME {
     CSRRWI,
     CSRRSI,
     CSRRCI,
+    //trap return
+    MRET,
+    SRET,
     //end
     INST_NUM,
 };

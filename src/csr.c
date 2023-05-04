@@ -23,6 +23,20 @@ void set_xpp(int cur_lev, int new_xpp) {
     }
 }
 
+uint64_t get_xpp(int cur_lev) {
+    switch (cur_lev)
+    {
+    case S:
+        return (get_csr(sstatus) >> 8) & 1;
+    case M:
+        return (get_csr(mstatus) >> 11) & 0b11;
+    default:
+        cpu.state = CPU_STOP;
+        printf("err:U-level call get_xpp\n");
+        return -1;
+    }
+}
+
 void set_xpie(int cur_lev, int new_xpie) {
     switch (cur_lev)
     {
@@ -41,6 +55,20 @@ void set_xpie(int cur_lev, int new_xpie) {
         cpu.state = CPU_STOP;
         printf("err:U-level call set_xpie");
         break;
+    }
+}
+
+uint64_t get_xpie(int cur_lev) {
+    switch (cur_lev)
+    {
+    case S:
+        return (get_csr(sstatus) >> 5) & 1;
+    case M:
+        return (get_csr(mstatus) >> 7) & 1;
+    default:
+        cpu.state = CPU_STOP;
+        printf("err:U-level call get_xpie");
+        return -1;
     }
 }
 
