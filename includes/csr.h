@@ -169,4 +169,16 @@ enum CSR_ADDR {
     pmpaddr63
 };
 
+void set_xpp(int cur_lev, int new_lev);
+
+void set_xpie(int cur_lev, int new_xpie);
+
+void set_xie(int cur_lev, int new_xie);
+
+uint64_t get_xie(int cur_lev);
+
+void set_csr(uint64_t csr_addr, uint64_t csr_val);
+
+uint64_t get_csr(uint64_t csr_addr);
+
 #endif

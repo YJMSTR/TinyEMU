@@ -1,8 +1,10 @@
 #ifndef __CPU_H__
 #define __CPU_H__
+
 #include "bus.h"
 #include "common.h"
 #include "csr.h"
+
 
 enum INST_NAME {
     //RV64I
