@@ -642,21 +642,21 @@ void csrrci(DECODER *decoder) {
 void mret(DECODER *decoder) {
     int pre_level = get_xpp(M);
     set_xie(M, get_xpie(M));
-    cpu.pri_level = pre_level;
     set_xpie(M, 1);
     set_xpp(M, U);
     set_csr(mstatus, get_csr(mstatus) & (~(1 << 17)));
     decoder->dnpc = get_csr(mepc);
+    cpu.pri_level = pre_level;
 }
 
 void sret(DECODER *decoder) {
     int pre_level = get_xpp(S);
     set_xie(S, get_xpie(S));
-    cpu.pri_level = pre_level;
     set_xpie(S, 1);
     set_xpp(S, U);
     set_csr(sstatus, get_csr(sstatus) & (~(1 << 17)));
     decoder->dnpc = get_csr(sepc);
+    cpu.pri_level = pre_level;
 }
 
 void init_inst_func() {

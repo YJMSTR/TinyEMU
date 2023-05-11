@@ -18,7 +18,7 @@ void set_xpp(int cur_lev, int new_xpp) {
         break;
     default:
         cpu.state = CPU_STOP;
-        printf("err:U-level call set_xpp\n");
+        puts("err:U-level call set_xpp\n");
         break;
     }
 }
@@ -32,7 +32,7 @@ uint64_t get_xpp(int cur_lev) {
         return (get_csr(mstatus) >> 11) & 0b11;
     default:
         cpu.state = CPU_STOP;
-        printf("err:U-level call get_xpp\n");
+        puts("err:U-level call get_xpp\n");
         return -1;
     }
 }
@@ -53,7 +53,7 @@ void set_xpie(int cur_lev, int new_xpie) {
         cpu.csr.csr[mstatus] |= (new_xpie << 7); 
     default:
         cpu.state = CPU_STOP;
-        printf("err:U-level call set_xpie");
+        puts("err:U-level call set_xpie");
         break;
     }
 }
@@ -67,7 +67,7 @@ uint64_t get_xpie(int cur_lev) {
         return (get_csr(mstatus) >> 7) & 1;
     default:
         cpu.state = CPU_STOP;
-        printf("err:U-level call get_xpie");
+        puts("err:U-level call get_xpie");
         return -1;
     }
 }
@@ -88,7 +88,7 @@ void set_xie(int cur_lev, int new_xie) {
         cpu.csr.csr[mstatus] |= (new_xie << 3); 
     default:
         cpu.state = CPU_STOP;
-        printf("err:U-level call set_xie");
+        puts("err:U-level call set_xie");
         break;
     }    
 }
@@ -102,7 +102,7 @@ uint64_t get_xie(int cur_lev) {
         return BITS(get_csr(mstatus), 3, 3);
     default:
         cpu.state = CPU_STOP;
-        printf("err:U-level call get_xie");
+        puts("err:U-level call get_xie");
         return -1;
         break;
     }
