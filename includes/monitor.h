@@ -14,5 +14,11 @@ void cmd_r();
 
 void cmd_s();
 
+void cmd_si();
+
 void cmd_re();
+
+void cmd_p();
+
+void cmd_t();
 #endif

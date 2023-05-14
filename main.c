@@ -24,7 +24,15 @@ int main(int argc, char *argv[]) {
                 else cmd_r();
                 break;
             case 's':
-                cmd_s();
+                if (opt[1] == 'i') {
+                    cmd_si();
+                } else cmd_s();
+                break;
+            case 'p':
+                cmd_p();
+                break;
+            case 't':
+                cmd_t();
                 break;
             default:
                 puts("invalid command");

@@ -16,7 +16,7 @@ void trap_handler(DECODER *decoder, enum TRAP traptype, bool isException, uint64
     }
     if (nxt_level == S) {
         set_xpp(S, cpu.pri_level);
-        set_xpie(S, get_xie(cpu.pri_level));
+        set_xpie(S, get_xie(S));
         set_xie(S, 0);
         set_csr(sepc, cpu.pc);
         set_csr(stval, tval);
@@ -25,7 +25,7 @@ void trap_handler(DECODER *decoder, enum TRAP traptype, bool isException, uint64
         decoder->dnpc = (BITS(tvec, 63, 2) << 2) + (BITS(tvec, 1, 0) == 1 ? cause * 4 : 0);
     } else {
         set_xpp(M, cpu.pri_level);
-        set_xpie(M, get_xie(cpu.pri_level));
+        set_xpie(M, get_xie(M));
         set_xie(M, 0);
         set_csr(mepc, cpu.pc);
         set_csr(mtval, tval);
@@ -33,4 +33,5 @@ void trap_handler(DECODER *decoder, enum TRAP traptype, bool isException, uint64
         uint64_t tvec = get_csr(mtvec);
         decoder->dnpc = (BITS(tvec, 63, 2) << 2) + (BITS(tvec, 1, 0) == 1 ? cause * 4 : 0);
     }
+    cpu.pri_level = nxt_level;
 }

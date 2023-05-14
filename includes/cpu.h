@@ -109,6 +109,12 @@ enum REG_ABINAME {
     t6
 };
 
+extern const char *reg_abinames[];
+
+extern uint64_t p_addr;
+
+extern bool riscv_tests;
+
 enum CPU_STATE {
     CPU_STOP,
     CPU_RUN,
@@ -152,9 +158,9 @@ extern void (*inst_handle[INST_NUM])(DECODER*);
 
 void init_inst_func();
 
-uint64_t MASK(int n);
-uint64_t BITS(uint64_t imm, int hi, int lo);
-uint64_t SEXT(uint64_t imm, int n);
+uint64_t MASK(uint64_t n);
+uint64_t BITS(uint64_t imm, uint64_t hi, uint64_t lo);
+uint64_t SEXT(uint64_t imm, uint64_t n);
 
 void cpu_init(CPU *cpu);
 uint64_t inst_fetch(CPU *cpu);

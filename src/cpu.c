@@ -1,28 +1,33 @@
 #include "../includes/cpu.h"
+#include "../includes/trap.h"
 #include "../includes/mem.h"
 #include "../includes/bus.h"
 #include "../includes/common.h"
 
+uint64_t p_addr;
+bool riscv_tests;
+const char *reg_abinames[] = {"$0","ra","sp","gp","tp","t0","t1","t2","s0","s1","a0","a1","a2","a3","a4","a5","a6","a7","s2","s3","s4","s5","s6","s7","s8","s9","s10","s11","t3","t4","t5","t6"};
 CPU cpu;
 void (*inst_handle[INST_NUM])(DECODER*);
 
-uint64_t MASK(int n) {
-    if (n == 64) return -1;
-    return (1ull << n) - 1;
+uint64_t MASK(uint64_t n) {
+    if (n == 64) return ~0ull;
+    return (1ull << n) - 1ull;
 }
-uint64_t BITS(uint64_t imm, int hi, int lo) {
-    return (imm >> lo) & MASK(hi - lo + 1);
+uint64_t BITS(uint64_t imm, uint64_t hi, uint64_t lo) {
+    return (imm >> lo) & MASK(hi - lo + 1ull);
 }
-uint64_t SEXT(uint64_t imm, int n) {
-    if ((1 << (n-1)) & imm) {
-        return (MASK(64) << n) | imm;
+uint64_t SEXT(uint64_t imm, uint64_t n) {
+    if ((1ull << (n-1)) & imm) {
+        printf("the src and res of sext are 0x%llx 0x%llx\n", imm, (~(0ull) << n) | imm);
+        return (~(0ull) << n) | imm;
     } else return imm;
 }
-uint32_t imm_u(uint32_t inst) {return SEXT(BITS(inst, 31, 12), 20);}
-uint32_t imm_j(uint32_t inst) {return (SEXT(BITS(inst, 31, 31), 1) << 20) | (BITS(inst, 30, 21) << 1) | (BITS(inst, 20, 20) << 11) | (BITS(inst, 19, 12) << 12);}
-uint32_t imm_i(uint32_t inst) {return SEXT(BITS(inst, 31, 20), 12);}
-uint32_t imm_s(uint32_t inst) {return SEXT((BITS(inst, 31, 25) << 5) | BITS(inst, 11, 7), 12); }
-uint32_t imm_b(uint32_t inst) {return (SEXT(BITS(inst, 31, 31), 1) << 12) | (BITS(inst, 30, 25) << 5) | (BITS(inst, 11, 8) << 1) | (BITS(inst, 7, 7) << 11);}
+uint64_t imm_u(uint32_t inst) {return SEXT(BITS(inst, 31, 12), 20);}
+uint64_t imm_j(uint32_t inst) {return (SEXT(BITS(inst, 31, 31), 1) << 20) | (BITS(inst, 30, 21) << 1) | (BITS(inst, 20, 20) << 11) | (BITS(inst, 19, 12) << 12);}
+uint64_t imm_i(uint32_t inst) {return SEXT(BITS(inst, 31, 20), 12);}
+uint64_t imm_s(uint32_t inst) {return SEXT((BITS(inst, 31, 25) << 5) | BITS(inst, 11, 7), 12); }
+uint64_t imm_b(uint32_t inst) {return (SEXT(BITS(inst, 31, 31), 1) << 12) | (BITS(inst, 30, 25) << 5) | (BITS(inst, 11, 8) << 1) | (BITS(inst, 7, 7) << 11);}
 
 
 void cpu_init(CPU *cpu) {
@@ -48,12 +53,19 @@ uint64_t inst_fetch(CPU *cpu) {
 void cpu_exec(CPU *cpu, uint32_t n) {
     for (int i = 0; i < n; i++) {
         if (cpu->state == CPU_RUN)
-        exec_once(cpu);
+            exec_once(cpu);
+        else break;
     }
 }
 
 void exec_once(CPU *cpu) {
     cpu->regs[0] = 0;
+    if (cpu->pc == p_addr) {
+        cpu->state = CPU_STOP;
+        printf("breakpoint at 0x%lx\n", p_addr);
+        p_addr = -1;
+        return;
+    }
     uint32_t inst = inst_fetch(cpu);
     printf("inst = 0x%08x, a0 = 0x%08lx csr[mhartid] = 0x%08lx\n", inst, cpu->regs[a0], cpu->csr.csr[mhartid]);
     DECODER decoder = decode(inst);
@@ -296,6 +308,7 @@ DECODER decode(uint32_t inst) {
         case 0b0011011:
             switch (funct3) {
                 case 0:
+                    ret.imm = imm_i(inst);
                     ret.inst_name = ADDIW;
                     break;
                 case 0b001:
@@ -357,7 +370,9 @@ void set_inst_func(enum INST_NAME inst_name, void (*fp)(DECODER*)) {
 }
 
 void lui(DECODER *decoder) { 
+    printf("lui decoder->imm = %llx\n", decoder->imm);
     decoder->cpu->regs[decoder->rd] = decoder->imm << 12;
+    printf("lui decoder->imm << 12 = %llx\n", decoder->cpu->regs[decoder->rd]);
 }
 
 void auipc(DECODER *decoder) { 
@@ -539,7 +554,16 @@ void fence(DECODER *decoder) {
 }
 
 void ecall(DECODER *decoder) {
-    //todo 
+    if (riscv_tests && decoder->cpu->regs[a7] == 93) {
+        if (decoder->cpu->regs[a0] == 0) {
+            printf("Test Pass\n");
+            decoder->cpu->state = CPU_STOP;
+        } else {
+            printf("Test #%d Fail\n", decoder->cpu->regs[a0]);
+            decoder->cpu->state = CPU_STOP;
+        }
+    }
+    trap_handler(decoder, Requested, false, decoder->cpu->pri_level + 8, 0);
     return;
 }
 
@@ -550,6 +574,7 @@ void ebreak(DECODER *decoder) {
 }
 
 void addiw(DECODER *decoder) {
+    printf("addiw imm = 0x%llx\n", decoder->imm);
     decoder->cpu->regs[decoder->rd] = SEXT(BITS(decoder->cpu->regs[decoder->rs1], 31, 0) + decoder->imm, 32);
 }
 
@@ -566,7 +591,7 @@ void sraiw(DECODER *decoder) {
 }
 
 void addw(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = BITS(decoder->cpu->regs[decoder->rs1], 31, 0) + BITS(decoder->cpu->regs[decoder->rs2], 31, 0);
+    decoder->cpu->regs[decoder->rd] = SEXT(BITS(decoder->cpu->regs[decoder->rs1], 31, 0) + BITS(decoder->cpu->regs[decoder->rs2], 31, 0), 32);
 }
 
 void subw(DECODER *decoder) {

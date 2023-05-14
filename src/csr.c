@@ -51,6 +51,7 @@ void set_xpie(int cur_lev, int new_xpie) {
         cpu.csr.csr[mstatus] &= (-1) ^ (1 << 7);
         // set mpie
         cpu.csr.csr[mstatus] |= (new_xpie << 7); 
+        break;
     default:
         cpu.state = CPU_STOP;
         puts("err:U-level call set_xpie");
@@ -86,6 +87,7 @@ void set_xie(int cur_lev, int new_xie) {
         cpu.csr.csr[mstatus] &= (-1) ^ (1 << 3);
         // set mie
         cpu.csr.csr[mstatus] |= (new_xie << 3); 
+        break;
     default:
         cpu.state = CPU_STOP;
         puts("err:U-level call set_xie");
