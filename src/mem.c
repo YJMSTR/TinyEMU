@@ -16,17 +16,18 @@ void dram_store(DRAM *dram, uint64_t addr, int length, uint64_t val) {
             return;
         case 2:
             dram->dram[addr] = val & 0xff;
-            dram->dram[addr + 1] = (val & 0xff00) >> 8;
+            dram->dram[addr + 1] = (val >> 8) & 0xff;
             return;
         case 4:
             dram->dram[addr] = val & 0xff;
-            dram->dram[addr + 1] = (val & 0xff00) >> 8;
-            dram->dram[addr + 2] = (val & 0xff0000) >> 16;
-            dram->dram[addr + 3] = (val & 0xff000000) >> 24;
+            dram->dram[addr + 1] = (val >> 8) & 0xff;
+            dram->dram[addr + 2] = (val >> 16) & 0xff;
+            dram->dram[addr + 3] = (val >> 24) & 0xff;
             return;
         case 8:
-            dram_store(dram, addr, 4, val & 0xffff);
-            dram_store(dram, addr + 4, 4, (val & 0xffff0000) >> 32);
+            printf("addr+4:0x%llx   addr: 0x%llx\n", addr + 4, addr);
+            dram_store(dram, addr, 4, val & 0xffffffff);
+            dram_store(dram, addr + 4, 4, (val >> 32) & 0xffffffff);
             return;
     }
 }
@@ -38,18 +39,20 @@ uint64_t dram_load(DRAM *dram, uint64_t addr, int length) {
         case 1:
             return dram->dram[addr];
         case 2:
-            return (dram->dram[addr + 1] << 8) | dram->dram[addr];
+            return (((uint64_t)dram->dram[addr + 1]) << 8) | (uint64_t)dram->dram[addr];
         case 4:
-            return (dram->dram[addr + 3] << 24) | (dram->dram[addr + 2] << 16) | (dram->dram[addr + 1] << 8) | (dram->dram[addr]);
+            return (((uint64_t)dram->dram[addr + 3]) << 24) | ((uint64_t)dram->dram[addr + 2] << 16) | ((uint64_t)dram->dram[addr + 1] << 8) | ((uint64_t)dram->dram[addr]);
         case 8:
+            printf("addr+4:0x%llx   addr: 0x%llx\n", dram_load(dram, addr + 4, 4), dram_load(dram, addr, 4));
             return (dram_load(dram, addr + 4, 4) << 32) | dram_load(dram, addr, 4);
     }
     return 0;
 }
 
 uint64_t mem_load(DRAM *dram, uint64_t addr, int length) {
-    printf("mem load addr = 0x%08lx\n", addr);
-    return dram_load(dram, addr - DRAM_BASE, length);
+    uint64_t res = dram_load(dram, addr - DRAM_BASE, length);
+    printf("mem load addr = 0x%08lx, res = 0x%llx\n", addr, res);
+    return res;
 }
 
 void mem_store(DRAM *dram, uint64_t addr, int length, uint64_t val) {

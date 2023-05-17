@@ -18,10 +18,10 @@ uint64_t BITS(uint64_t imm, uint64_t hi, uint64_t lo) {
     return (imm >> lo) & MASK(hi - lo + 1ull);
 }
 uint64_t SEXT(uint64_t imm, uint64_t n) {
-    if ((1ull << (n-1)) & imm) {
-        printf("the src and res of sext are 0x%llx 0x%llx\n", imm, (~(0ull) << n) | imm);
-        return (~(0ull) << n) | imm;
-    } else return imm;
+    if ((imm >> (n-1)) & 1) {
+        printf("the src and res of sext are 0x%llx 0x%llx\n", imm, ((~0ull) << n) | imm);
+        return ((~0ull) << n) | imm;
+    } else return imm & MASK(n);
 }
 uint64_t imm_u(uint32_t inst) {return SEXT(BITS(inst, 31, 12), 20);}
 uint64_t imm_j(uint32_t inst) {return (SEXT(BITS(inst, 31, 31), 1) << 20) | (BITS(inst, 30, 21) << 1) | (BITS(inst, 20, 20) << 11) | (BITS(inst, 19, 12) << 12);}
@@ -67,7 +67,7 @@ void exec_once(CPU *cpu) {
         return;
     }
     uint32_t inst = inst_fetch(cpu);
-    printf("inst = 0x%08x, a0 = 0x%08lx csr[mhartid] = 0x%08lx\n", inst, cpu->regs[a0], cpu->csr.csr[mhartid]);
+    printf("inst = 0x%08x\n", inst);
     DECODER decoder = decode(inst);
     if (decoder.inst_name == INST_NUM) {
         cpu->state = CPU_STOP;
@@ -163,6 +163,7 @@ DECODER decode(uint32_t inst) {
             break;
         case 0b0100011:
             ret.imm = imm_s(inst);
+            printf("imm_s == 0x%llx\n", ret.imm);
             switch (funct3) {
                 case 0b000:
                     ret.inst_name = SB;
@@ -251,6 +252,11 @@ DECODER decode(uint32_t inst) {
         case 0b0001111:
             switch (funct3) {
                 case 0:
+                    ret.inst_name = FENCE;
+                    break;
+                case 1:
+                    //fence_i
+                    //implement as NOP
                     ret.inst_name = FENCE;
                     break;
                 default:
@@ -432,11 +438,11 @@ void lb(DECODER *decoder) {
 }
 
 void lh(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = SEXT(cpu_load(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 2), 8);
+    decoder->cpu->regs[decoder->rd] = SEXT(cpu_load(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 2), 16);
 }
 
 void lw(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = SEXT(cpu_load(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 4), 8);
+    decoder->cpu->regs[decoder->rd] = SEXT(cpu_load(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 4), 32);
 }
 
 void lbu(DECODER *decoder) {
@@ -468,6 +474,7 @@ void sw(DECODER *decoder) {
 }
 
 void sd(DECODER *decoder) {
+    printf("sd addr = 0x%llx\n", decoder->cpu->regs[decoder->rs1] + decoder->imm);
     cpu_store(decoder->cpu, decoder->cpu->regs[decoder->rs1] + decoder->imm, 8, decoder->cpu->regs[decoder->rs2]);
 }
 
@@ -559,7 +566,7 @@ void ecall(DECODER *decoder) {
             printf("Test Pass\n");
             decoder->cpu->state = CPU_STOP;
         } else {
-            printf("Test #%d Fail\n", decoder->cpu->regs[a0]);
+            printf("Test #%d Fail\n", decoder->cpu->regs[a0]/2);
             decoder->cpu->state = CPU_STOP;
         }
     }
@@ -574,12 +581,11 @@ void ebreak(DECODER *decoder) {
 }
 
 void addiw(DECODER *decoder) {
-    printf("addiw imm = 0x%llx\n", decoder->imm);
-    decoder->cpu->regs[decoder->rd] = SEXT(BITS(decoder->cpu->regs[decoder->rs1], 31, 0) + decoder->imm, 32);
+    decoder->cpu->regs[decoder->rd] = SEXT(BITS(decoder->cpu->regs[decoder->rs1] + decoder->imm, 31, 0), 32);
 }
 
 void slliw(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = SEXT(BITS(decoder->cpu->regs[decoder->rs1], 31, 0) << decoder->shamt, 32);
+    decoder->cpu->regs[decoder->rd] = SEXT(BITS(decoder->cpu->regs[decoder->rs1] << decoder->shamt, 31, 0), 32);
 }
 
 void srliw(DECODER *decoder) {
@@ -591,7 +597,7 @@ void sraiw(DECODER *decoder) {
 }
 
 void addw(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = SEXT(BITS(decoder->cpu->regs[decoder->rs1], 31, 0) + BITS(decoder->cpu->regs[decoder->rs2], 31, 0), 32);
+    decoder->cpu->regs[decoder->rd] = SEXT(BITS(decoder->cpu->regs[decoder->rs1] + decoder->cpu->regs[decoder->rs2], 31, 0), 32);
 }
 
 void subw(DECODER *decoder) {
@@ -599,7 +605,7 @@ void subw(DECODER *decoder) {
 }
 
 void sllw(DECODER *decoder) {
-    decoder->cpu->regs[decoder->rd] = SEXT(decoder->cpu->regs[decoder->rs1] << BITS(decoder->cpu->regs[decoder->rs2], 4, 0), 32);
+    decoder->cpu->regs[decoder->rd] = SEXT(BITS(decoder->cpu->regs[decoder->rs1] << BITS(decoder->cpu->regs[decoder->rs2], 4, 0), 31, 0), 32);
 }
 
 void srlw(DECODER *decoder) {
