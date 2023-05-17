@@ -1,4 +1,5 @@
 *.bin
 *.S
 *.o
+/.vscode
 /build
