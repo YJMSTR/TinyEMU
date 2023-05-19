@@ -20,7 +20,7 @@ void trap_handler(DECODER *decoder, enum TRAP traptype, bool isException, uint64
         set_xie(S, 0);
         set_csr(sepc, cpu.pc);
         set_csr(stval, tval);
-        set_csr(scause, (((uint64_t)traptype) << 63) | cause);
+        set_csr(scause, ((isException?0ull:1ull) << 63) | cause);
         uint64_t tvec = get_csr(stvec);
         decoder->dnpc = (BITS(tvec, 63, 2) << 2) + (BITS(tvec, 1, 0) == 1 ? cause * 4 : 0);
     } else {
@@ -29,7 +29,7 @@ void trap_handler(DECODER *decoder, enum TRAP traptype, bool isException, uint64
         set_xie(M, 0);
         set_csr(mepc, cpu.pc);
         set_csr(mtval, tval);
-        set_csr(mcause, (((uint64_t)traptype) << 63) | cause);
+        set_csr(mcause, ((isException?0ull:1ull) << 63) | cause);
         uint64_t tvec = get_csr(mtvec);
         decoder->dnpc = (BITS(tvec, 63, 2) << 2) + (BITS(tvec, 1, 0) == 1 ? cause * 4 : 0);
     }
