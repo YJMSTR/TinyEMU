@@ -8,7 +8,7 @@ void trap_handler(DECODER *decoder, enum TRAP traptype, bool isException, uint64
         return;
     }
     enum CPU_PRI_LEVEL nxt_level = M;
-    if (cpu.pri_level == S) {
+    if (cpu.pri_level <= S) {
         if ((isException && (get_csr(medeleg) & (1 << cause)))
             || (!isException && (get_csr(mideleg) & (1 << cause)))) {   
             nxt_level = S;
